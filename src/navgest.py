@@ -55,10 +55,10 @@ class navgest:
 
         if self.mode == "live":
             self.cap = cv2.VideoCapture(0)
+            if(self.save_trace):
+                self.make_trace_file()
         elif self.mode == "playback":
             self.trace_gen = self.trace_generator()
-        if self.save_trace:
-            self.make_trace_file()
         return
     
     def make_trace_file(self):
@@ -73,6 +73,7 @@ class navgest:
     
     def trace_generator(self):
         data = pd.read_csv(self.trace_file)
+        print(data.head())
         for _, row in data.iterrows():
             timestamp = row.get('time', None)  # Fetch timestamp if available
             landmarks_vector = row.drop('time', errors='ignore').values
@@ -89,9 +90,9 @@ class navgest:
     def repeat(self):
         next_time = time.time() + self.interval
         self.scheduler.enterabs(next_time, 1, self.repeat, ())
-        self.per_frame()
+        ret = self.per_frame()
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if (cv2.waitKey(1) & 0xFF == ord('q')) or (not ret):
             self.stop()
     
     def per_frame(self):
@@ -116,25 +117,25 @@ class navgest:
                             
 
                 cv2.imshow("Live Stream", frame)
+                return 1
 
             else:
                 print("FAIL")
+                return 1
         elif(self.mode == "playback"):
             # play the trace from the file 
             try:
-                timestamp, landmark_vector = next(self.trace_gen)
-                print(f"Timestamp: {timestamp}, Landmarks: {landmark_vector}")
-                
+                timestamp, landmark_vector = next(self.trace_gen)                
                 self.last_state = self.state
                 self.state = landmark_vector
                 if(self.last_timestamp):
                     self.diff = (self.state - self.last_state)/(timestamp - self.last_timestamp)
                 self.last_timestamp = timestamp
+                self.process_state()
+                return 1
             except StopIteration:
                 print("Finished playback.")
-                return None
-            pass
-            
+                return None            
         return
     
     def trace_state(self):
