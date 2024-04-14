@@ -73,11 +73,9 @@ class navgest:
     
     def trace_generator(self):
         data = pd.read_csv(self.trace_file)
-        print(data.head())
         for _, row in data.iterrows():
             timestamp = row.get('time', None)  # Fetch timestamp if available
             landmarks_vector = row.drop('time', errors='ignore').values
-            print(timestamp, landmarks_vector)
             yield (timestamp, landmarks_vector)
 
     def start(self):
@@ -175,8 +173,23 @@ class navgest:
     def process_state(self):
         # for now, just print velocity
         self.track_points()
+        self.det_wrist_flick()
         return
     
+    def det_wrist_flick(self):
+        # wrist might not move, or move slightly 
+        # Index and Pinky might move fast and more than wrist
+
+        # let's try mag(vx,vy) > 0.2 for 0.4 s
+        # and net delta x > 0.1, net delta y < 0
+        # above for both index and pinky 
+        # z increases and then decreases?
+        index_vx, index_vy = self.get_xy_from_vector(self.diff, "INDEX_FINGER_TIP")
+        mag_v = (index_vx**2 + index_vy**2)**(0.5)
+        if(mag_v > 0.9):
+            print("High V for index tip")
+        return
+
     def track_points(self):
         print("Wrist vx, vy = ", self.get_xy_from_vector(self.diff, "WRIST"))
         print("Index tip vx, vy = ", self.get_xy_from_vector(self.diff, "INDEX_FINGER_TIP"))
@@ -184,7 +197,7 @@ class navgest:
         return
     
 def main():
-    nv = navgest("playback", True, 0.1, "./data/default.csv")
+    nv = navgest("live", True, 0.1, "./data/default.csv")
     nv.start()
 if __name__ == "__main__":
     main()
