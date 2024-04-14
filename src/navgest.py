@@ -24,6 +24,7 @@ class navgest:
                         min_tracking_confidence=0.5)
         self.state = np.empty(63)
         self.state[:] = np.nan
+        self.last_timestamp = np.nan
         self.last_state = self.state
         self.diff = self.state
         self.trace_file = trace_file
@@ -73,8 +74,9 @@ class navgest:
     def trace_generator(self):
         data = pd.read_csv(self.trace_file)
         for _, row in data.iterrows():
-            timestamp = row.get('timestamp', None)  # Fetch timestamp if available
-            landmarks_vector = row.drop('timestamp', errors='ignore').values
+            timestamp = row.get('time', None)  # Fetch timestamp if available
+            landmarks_vector = row.drop('time', errors='ignore').values
+            print(timestamp, landmarks_vector)
             yield (timestamp, landmarks_vector)
 
     def start(self):
@@ -119,7 +121,18 @@ class navgest:
                 print("FAIL")
         elif(self.mode == "playback"):
             # play the trace from the file 
-
+            try:
+                timestamp, landmark_vector = next(self.trace_gen)
+                print(f"Timestamp: {timestamp}, Landmarks: {landmark_vector}")
+                
+                self.last_state = self.state
+                self.state = landmark_vector
+                if(self.last_timestamp):
+                    self.diff = (self.state - self.last_state)/(timestamp - self.last_timestamp)
+                self.last_timestamp = timestamp
+            except StopIteration:
+                print("Finished playback.")
+                return None
             pass
             
         return
@@ -170,7 +183,7 @@ class navgest:
         return
     
 def main():
-    nv = navgest("live", True, 0.1, "./data/default.csv")
+    nv = navgest("playback", True, 0.1, "./data/default.csv")
     nv.start()
 if __name__ == "__main__":
     main()
