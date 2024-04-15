@@ -9,6 +9,14 @@ import mediapipe as mp
 # When navgest.per_frame() is called, depending on the mode, either the current frame from the video capture
 # is processed by the model and the landmarks are output, or the landmarks from a stored .csv trace 
 # are output 
+
+class accumulate_motion:
+    def __init__(self):
+        pass 
+
+    def reset(self):
+        pass 
+        
 class navgest:
     def __init__(self, mode : str, save_trace : bool, interval : float, trace_file : str = None):
         self.mode = mode 
@@ -186,8 +194,8 @@ class navgest:
         # z increases and then decreases?
         index_vx, index_vy = self.get_xy_from_vector(self.diff, "INDEX_FINGER_TIP")
         mag_v = (index_vx**2 + index_vy**2)**(0.5)
-        if(mag_v > 0.9):
-            print("High V for index tip")
+        if(mag_v > 0.75 and index_vx > 0.2):
+            print("High V for index tip towards right")
         return
 
     def track_points(self):
@@ -197,7 +205,7 @@ class navgest:
         return
     
 def main():
-    nv = navgest("live", True, 0.1, "./data/default.csv")
+    nv = navgest("live", True, 0.08, "./data/default.csv")
     nv.start()
 if __name__ == "__main__":
     main()
