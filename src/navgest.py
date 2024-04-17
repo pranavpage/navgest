@@ -10,11 +10,35 @@ import mediapipe as mp
 # is processed by the model and the landmarks are output, or the landmarks from a stored .csv trace 
 # are output 
 
+
+# Class to store average velocity, total displacement of a landmark
 class accumulate_motion:
-    def __init__(self):
-        pass 
+    def __init__(self, landmark):
+        self.average_vx = 0
+        self.average_vy = 0
+        self.del_x = 0
+        self.del_y = 0
+        self.time = 0
+        self.landmark = landmark
+        pass
+
+    def __repr__(self) -> str:
+        return f"Accumulator for {self.landmark}, time={self.time}, displacement since init = ({self.del_x:.3f}, {self.del_y:.3f}), avg velocity = {self.average_vx:.3f}, {self.average_vy:.3f}"
+
+    def update(self, vx, vy, interval):
+        self.del_x += interval*vx
+        self.del_y += interval*vy
+        self.time += interval
+        self.average_vx = (self.del_x)/self.time 
+        self.average_vy = (self.del_y)/self.time
+        pass
 
     def reset(self):
+        self.average_vx = 0
+        self.average_vy = 0
+        self.del_x = 0
+        self.del_y = 0
+        self.time = 0
         pass 
         
 class navgest:
@@ -193,19 +217,26 @@ class navgest:
         # above for both index and pinky 
         # z increases and then decreases?
         index_vx, index_vy = self.get_xy_from_vector(self.diff, "INDEX_FINGER_TIP")
-        mag_v = (index_vx**2 + index_vy**2)**(0.5)
-        if(mag_v > 0.75 and index_vx > 0.2):
-            print("High V for index tip towards right")
+        try:
+            mag_v = (index_vx**2 + index_vy**2)**(0.5)
+            if(mag_v > 0.75 and index_vx > 0.2):
+                self.IFT.update(index_vx, index_vy, self.interval)
+            if((abs(self.IFT.average_vx) > 1) and (abs(self.IFT.average_vy) > 0.8)):
+                print("\n" + "-"*20 + "Wrist Flick" + "-"*20 + "\n")
+                self.IFT.reset()
+        except AttributeError:
+            self.IFT = accumulate_motion("INDEX_FINGER_TIP")
         return
 
     def track_points(self):
-        print("Wrist vx, vy = ", self.get_xy_from_vector(self.diff, "WRIST"))
-        print("Index tip vx, vy = ", self.get_xy_from_vector(self.diff, "INDEX_FINGER_TIP"))
-        print("Pinky tip vx, vy = ", self.get_xy_from_vector(self.diff, "PINKY_TIP"))
+        
+        # print("Wrist vx, vy = ", self.get_xy_from_vector(self.diff, "WRIST"))
+        # print("Index tip vx, vy = ", self.get_xy_from_vector(self.diff, "INDEX_FINGER_TIP"))
+        # print("Pinky tip vx, vy = ", self.get_xy_from_vector(self.diff, "PINKY_TIP"))
         return
     
 def main():
-    nv = navgest("live", True, 0.08, "./data/default.csv")
+    nv = navgest("live", True, 0.1, "./data/default.csv")
     nv.start()
 if __name__ == "__main__":
     main()
