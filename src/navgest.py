@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt 
 import matplotlib.animation as animation
-import cv2, sched, time, csv
+import cv2, sched, time, csv, pyautogui
 import mediapipe as mp 
 
 # Making a class to handle everything 
@@ -224,6 +224,7 @@ class navgest:
             if((abs(self.IFT.average_vx) > 1) and (abs(self.IFT.average_vy) > 0.8)):
                 print("\n" + "-"*20 + "Wrist Flick" + "-"*20 + "\n")
                 self.IFT.reset()
+                self.action_wrist_flick()
         except AttributeError:
             self.IFT = accumulate_motion("INDEX_FINGER_TIP")
         return
@@ -234,6 +235,17 @@ class navgest:
         # print("Index tip vx, vy = ", self.get_xy_from_vector(self.diff, "INDEX_FINGER_TIP"))
         # print("Pinky tip vx, vy = ", self.get_xy_from_vector(self.diff, "PINKY_TIP"))
         return
+    
+    def action_wrist_flick(self):
+        try:
+            pyautogui.keyDown('alt')  
+            pyautogui.press('tab')    
+            time.sleep(1)             
+            pyautogui.keyUp('alt')
+        except Exception as e:
+            print(e)
+        return
+
     
 def main():
     nv = navgest("live", True, 0.1, "./data/default.csv")
