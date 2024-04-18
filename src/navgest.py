@@ -238,10 +238,11 @@ class navgest:
     
     def action_wrist_flick(self):
         try:
-            pyautogui.keyDown('alt')  
-            pyautogui.press('tab')    
-            time.sleep(1)             
-            pyautogui.keyUp('alt')
+            pyautogui.keyDown('ctrl')
+            time.sleep(0.1)
+            pyautogui.press('tab')
+            time.sleep(0.1)
+            pyautogui.keyUp('ctrl')
         except Exception as e:
             print(e)
         return
