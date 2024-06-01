@@ -205,6 +205,10 @@ class navgest:
         # for now, just print velocity
         self.track_points()
         self.det_wrist_flick()
+        self.det_swipe_up()
+        self.det_swipe_down()
+        # self.det_italian() # italian hand gesture?
+        # self.det_namaste() # Open/Close
         return
 
     def det_wrist_flick(self):
@@ -226,6 +230,18 @@ class navgest:
                 self.action_wrist_flick()
         except AttributeError:
             self.IFT = accumulate_motion("INDEX_FINGER_TIP")
+        return
+
+    def det_swipe_up(self):
+        # thumb doesn't move much
+        # all four fingers move up fast
+        index_vx, index_vy = self.get_xy_from_vector(self.diff, "INDEX_FINGER_TIP")
+        pinky_vx, pinky_vy = self.get_xy_from_vector(self.diff, "PINKY_TIP")
+        return
+
+    def det_swipe_down(self):
+        # thumb doesn't move much
+        # all four fingers move down fast
         return
 
     def track_points(self):
