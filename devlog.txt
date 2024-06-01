@@ -1,0 +1,10 @@
+
+Sat Jun  1 05:26:06 PM IST 2024
+
+See if you can find algos which are used in recognising gestures
+In smartphones
+
+Do we need trackers for all five finger tips?
+track_tips()
+    - takes care of all tip average velocities
+    - resetting the accumulators for tips
