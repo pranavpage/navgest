@@ -25,3 +25,5 @@ Pass the method into accumulate motion
 Sun Jun  2 11:10:52 AM IST 2024
 
 Wrist Flick PoC, reset periodically
+
+Is it simpler and better to simply track the last 5 frames?

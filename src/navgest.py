@@ -31,7 +31,8 @@ class accumulate_motion:
         return f"Accumulator for {self.landmark},\
     time={self.time_acc}, displacement since init = ({self.del_x:.3f},\
     {self.del_y:.3f}),\
-    avg velocity = {self.average_vx:.3f}, {self.average_vy:.3f}"
+    avg velocity = {self.average_vx:.3f}, {self.average_vy:.3f}, \
+    time active = {self.time_active}"
 
     def update(self, vx, vy, interval):
         mag_v = (vx**2 + vy**2)**0.5
@@ -244,7 +245,8 @@ class navgest:
     def det_wrist_flick(self):
         # wrist might not move, or move slightly
         # Index and Pinky might move fast and more than wrist
-        if (self.IFT.average_vx > 0.5):
+        # print(self.IFT)
+        if (self.IFT.average_vx > 0.5 and self.IFT.time_acc > self.interval):
             print_log('Wrist Flick')
             self.IFT.reset()
         return
