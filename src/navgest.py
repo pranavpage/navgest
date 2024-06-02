@@ -11,37 +11,48 @@ import mediapipe as mp
 # are output
 
 
+def print_log(event):
+    print('-'*30 + f' {event} ' + '-'*30 + '\n')
+    return
+
 # Class to store average velocity, total displacement of a landmark
 class accumulate_motion:
-    def __init__(self, landmark):
+    def __init__(self, landmark, v_th):
         self.average_vx = 0
         self.average_vy = 0
         self.del_x = 0
         self.del_y = 0
-        self.time = 0
+        self.time_acc = 0
         self.landmark = landmark
-        pass
+        self.v_th = v_th
+        self.time_active = 0
 
     def __repr__(self) -> str:
         return f"Accumulator for {self.landmark},\
-    time={self.time}, displacement since init = ({self.del_x:.3f},\
+    time={self.time_acc}, displacement since init = ({self.del_x:.3f},\
     {self.del_y:.3f}),\
     avg velocity = {self.average_vx:.3f}, {self.average_vy:.3f}"
 
     def update(self, vx, vy, interval):
-        self.del_x += interval*vx
-        self.del_y += interval*vy
-        self.time += interval
-        self.average_vx = (self.del_x)/self.time
-        self.average_vy = (self.del_y)/self.time
-        pass
+        mag_v = (vx**2 + vy**2)**0.5
+        self.time_active += interval
+        # print_log(f'{self.landmark} : {mag_v}')
+        if(mag_v >= self.v_th):
+            self.del_x += interval*vx
+            self.del_y += interval*vy
+            self.time_acc += interval
+            self.average_vx = (self.del_x)/self.time_acc
+            self.average_vy = (self.del_y)/self.time_acc
+        elif(self.time_active >= 5*interval):
+            self.reset()
 
     def reset(self):
         self.average_vx = 0
         self.average_vy = 0
         self.del_x = 0
         self.del_y = 0
-        self.time = 0
+        self.time_acc = 0
+        self.time_active = 0
 
 
 class navgest:
@@ -87,6 +98,11 @@ class navgest:
             'PINKY_DIP': 19,
             'PINKY_TIP': 20
         }
+        self.IFT = accumulate_motion("INDEX_FINGER_TIP", 0.5)
+        self.TT = accumulate_motion("THUMB_TIP", 0.5)
+        self.MFT = accumulate_motion("MIDDLE_FINGER_TIP", 1)
+        self.RFT = accumulate_motion("RING_FINGER_TIP", 1)
+        self.PT = accumulate_motion("PINKY_TIP", 1)
 
         if self.mode == "live":
             self.cap = cv2.VideoCapture(0)
@@ -95,7 +111,7 @@ class navgest:
         elif self.mode == "playback":
             self.trace_gen = self.trace_generator()
         return
-    
+
     def make_trace_file(self):
         with open(self.trace_file, 'w', newline='') as file:
             writer = csv.writer(file)
@@ -203,7 +219,7 @@ class navgest:
 
     def process_state(self):
         # for now, just print velocity
-        self.track_points()
+        self.track_tips()
         self.det_wrist_flick()
         self.det_swipe_up()
         self.det_swipe_down()
@@ -211,32 +227,33 @@ class navgest:
         # self.det_namaste() # Open/Close
         return
 
+    def track_tips(self):
+        # Init accumulators for tips of fingers 
+        index_vx, index_vy = self.get_xy_from_vector(self.diff, self.IFT.landmark)
+        thumb_vx, thumb_vy = self.get_xy_from_vector(self.diff, self.TT.landmark)
+        middle_vx, middle_vy = self.get_xy_from_vector(self.diff, self.MFT.landmark)
+        ring_vx, ring_vy = self.get_xy_from_vector(self.diff, self.RFT.landmark)
+        pinky_vx, pinky_vy = self.get_xy_from_vector(self.diff, self.PT.landmark)
+        self.IFT.update(index_vx, index_vy, self.interval)
+        self.TT.update(thumb_vx, thumb_vy, self.interval)
+        self.MFT.update(middle_vx, middle_vy, self.interval)
+        self.RFT.update(ring_vx, ring_vy, self.interval)
+        self.PT.update(pinky_vx, pinky_vy, self.interval)
+        return
+
     def det_wrist_flick(self):
         # wrist might not move, or move slightly
         # Index and Pinky might move fast and more than wrist
-
-        # let's try mag(vx,vy) > 0.2 for 0.4 s
-        # and net delta x > 0.1, net delta y < 0
-        # above for both index and pinky
-        # z increases and then decreases?
-        index_vx, index_vy = self.get_xy_from_vector(self.diff, "INDEX_FINGER_TIP")
-        try:
-            mag_v = (index_vx**2 + index_vy**2)**(0.5)
-            if (mag_v > 0.75 and index_vx > 0.2):
-                self.IFT.update(index_vx, index_vy, self.interval)
-            if ((abs(self.IFT.average_vx) > 1) and (abs(self.IFT.average_vy) > 0.8)):
-                print("\n" + "-"*20 + "Wrist Flick" + "-"*20 + "\n")
-                self.IFT.reset()
-                self.action_wrist_flick()
-        except AttributeError:
-            self.IFT = accumulate_motion("INDEX_FINGER_TIP")
+        if (self.IFT.average_vx > 0.5):
+            print_log('Wrist Flick')
+            self.IFT.reset()
         return
+
+
 
     def det_swipe_up(self):
         # thumb doesn't move much
         # all four fingers move up fast
-        index_vx, index_vy = self.get_xy_from_vector(self.diff, "INDEX_FINGER_TIP")
-        pinky_vx, pinky_vy = self.get_xy_from_vector(self.diff, "PINKY_TIP")
         return
 
     def det_swipe_down(self):

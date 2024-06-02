@@ -1,10 +1,27 @@
 
 Sat Jun  1 05:26:06 PM IST 2024
 
-See if you can find algos which are used in recognising gestures
-In smartphones
+See if you can find algos which are used in recognising gestures in smartphones
 
 Do we need trackers for all five finger tips?
 track_tips()
     - takes care of all tip average velocities
     - resetting the accumulators for tips
+
+Sat Jun  1 08:46:19 PM IST 2024
+
+Change the implementation of det wrist flick
+Track tips
+Detect Swipe Up/ Swipe Down
+
+
+
+Sat Jun  1 11:06:54 PM IST 2024
+
+Pass the method into accumulate motion
+
+
+
+Sun Jun  2 11:10:52 AM IST 2024
+
+Wrist Flick PoC, reset periodically
