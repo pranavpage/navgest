@@ -25,27 +25,26 @@ class accumulate_motion:
         self.time_acc = 0
         self.landmark = landmark
         self.v_th = v_th
-        self.time_active = 0
+        self.fist_counter = 0
 
     def __repr__(self) -> str:
         return f"Accumulator for {self.landmark},\
     time={self.time_acc}, displacement since init = ({self.del_x:.3f},\
     {self.del_y:.3f}),\
     avg velocity = {self.average_vx:.3f}, {self.average_vy:.3f}, \
-    time active = {self.time_active}"
+    counter = {self.fist_counter}"
 
     def update(self, vx, vy, interval):
         mag_v = (vx**2 + vy**2)**0.5
-        self.time_active += interval
-        # print_log(f'{self.landmark} : {mag_v}')
-        if(mag_v >= self.v_th):
+        self.fist_counter -= interval
+        if (self.fist_counter < 0):
+            self.reset()
+        elif (mag_v >= self.v_th):
             self.del_x += interval*vx
             self.del_y += interval*vy
             self.time_acc += interval
             self.average_vx = (self.del_x)/self.time_acc
             self.average_vy = (self.del_y)/self.time_acc
-        elif(self.time_active >= 5*interval):
-            self.reset()
 
     def reset(self):
         self.average_vx = 0
@@ -53,7 +52,7 @@ class accumulate_motion:
         self.del_x = 0
         self.del_y = 0
         self.time_acc = 0
-        self.time_active = 0
+        self.fist_counter = 0
 
 
 class navgest:
@@ -220,12 +219,31 @@ class navgest:
 
     def process_state(self):
         # for now, just print velocity
+        self.det_closed_fist()
         self.track_tips()
         self.det_wrist_flick()
         self.det_swipe_up()
         self.det_swipe_down()
         # self.det_italian() # italian hand gesture?
         # self.det_namaste() # Open/Close
+        return
+
+    def det_closed_fist(self):
+        # detect closed fist
+
+        # average distance between 4 fingers and thumb < threshold
+        index_x, index_y = self.get_xy_from_vector(self.state, self.IFT.landmark)
+        pinky_x, pinky_y = self.get_xy_from_vector(self.state, self.PT.landmark)
+        thumb_x, thumb_y = self.get_xy_from_vector(self.state, self.TT.landmark)
+        index_dist = ((thumb_x - index_x)**2 + (thumb_y - index_y)**2)**0.5
+        pinky_dist = ((thumb_x - pinky_x)**2 + (thumb_y - pinky_y)**2)**0.5
+        if (index_dist < 0.1 and pinky_dist < 0.15):
+            # print_log('Closed Fist')
+            self.IFT.fist_counter = 5*self.interval
+            self.TT.fist_counter = 5*self.interval
+            self.MFT.fist_counter = 5*self.interval
+            self.RFT.fist_counter = 5*self.interval
+            self.PT.fist_counter = 5*self.interval
         return
 
     def track_tips(self):
@@ -252,15 +270,20 @@ class navgest:
         return
 
 
-
     def det_swipe_up(self):
         # thumb doesn't move much
         # all four fingers move up fast
+        if (self.IFT.average_vy < -0.4 and self.IFT.time_acc > self.interval):
+            print_log('Swipe Up')
+            self.IFT.reset()
         return
 
     def det_swipe_down(self):
         # thumb doesn't move much
         # all four fingers move down fast
+        if (self.IFT.average_vy > 0.5 and self.IFT.time_acc > self.interval):
+            print_log('Swipe Down')
+            self.IFT.reset()
         return
 
     def track_points(self):
